@@ -1,3 +1,5 @@
+import type { User } from "grammy/types";
+
 import { run } from "@grammyjs/runner";
 import { Bot, GrammyError, InlineKeyboard } from "grammy";
 
@@ -8,10 +10,39 @@ const bot = new Bot(TOKEN);
 
 const m = bot.on("message");
 
-const games = new Map(); // groupId → game
-const getDisplayName = (p) => p.first_name || p.username || `Player${p.id}`;
+interface Player {
+  id: number;
+  first_name: string;
+  username?: string;
+  role: "mafia" | "villager" | null;
+  alive: boolean;
+}
 
-function shuffle(array) {
+interface PlayerWithRole extends Player {
+  role: "mafia" | "villager";
+}
+
+interface GameLobby {
+  status: "lobby";
+  players: Player[];
+}
+
+interface GameOngoing {
+  status: "night" | "day";
+  players: PlayerWithRole[];
+  dayVotes: Map<number, number>;
+  mafiaVotes: Map<number, number>;
+  nightProgressMsgId: number;
+  dayProgressMsgId: number;
+}
+
+type Game = GameOngoing | GameLobby;
+
+const games = new Map<number, Game>(); // groupId → game
+const getDisplayName = (p: User | Player) =>
+  p.first_name || p.username || `Player${p.id}`;
+
+function shuffle<T>(array: T[]) {
   const arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -20,12 +51,12 @@ function shuffle(array) {
   return arr;
 }
 
-async function endGame(groupId) {
+async function endGame(groupId: number) {
   await bot.api.sendMessage(groupId, "Game ended.");
   games.delete(groupId);
 }
 
-function checkWin(game, groupId) {
+function checkWin(game: Game, groupId: number) {
   const aliveMafia = game.players.filter(
     (p) => p.alive && p.role === "mafia",
   ).length;
@@ -49,18 +80,16 @@ function checkWin(game, groupId) {
   return false;
 }
 
-async function sendRevealButton(groupId) {
+async function sendRevealButton(groupId: number) {
   const keyboard = new InlineKeyboard().text("Reveal my role", "reveal_role");
   await bot.api.sendMessage(
     groupId,
     "🃏 Click to reveal **your role** privately (popup):",
-    {
-      reply_markup: keyboard,
-    },
+    { reply_markup: keyboard },
   );
 }
 
-async function startNight(game, groupId) {
+async function startNight(game: Game, groupId: number) {
   game.status = "night";
   game.mafiaVotes = new Map();
 
@@ -90,7 +119,7 @@ async function startNight(game, groupId) {
   game.nightProgressMsgId = sent.message_id;
 }
 
-async function updateNightProgress(game, groupId) {
+async function updateNightProgress(game: GameOngoing, groupId: number) {
   if (!game.nightProgressMsgId) return;
   const aliveMafia = game.players.filter(
     (p) => p.alive && p.role === "mafia",
@@ -111,7 +140,7 @@ async function updateNightProgress(game, groupId) {
       parse_mode: "Markdown",
       reply_markup: keyboard,
     });
-  } catch (e) {
+  } catch {
     // fallback: send new if edit fails
     const newSent = await bot.api.sendMessage(groupId, text, {
       parse_mode: "Markdown",
@@ -121,13 +150,13 @@ async function updateNightProgress(game, groupId) {
   }
 }
 
-async function processNightKill(game, groupId) {
-  const voteCounts = {};
+async function processNightKill(game: GameOngoing, groupId: number) {
+  const voteCounts: Record<number, number> = {};
   for (const targetId of game.mafiaVotes.values()) {
     voteCounts[targetId] = (voteCounts[targetId] || 0) + 1;
   }
   let max = 0;
-  let candidates = [];
+  let candidates: number[] = [];
   for (const [tid, c] of Object.entries(voteCounts)) {
     const t = parseInt(tid);
     if (c > max) {
@@ -151,7 +180,7 @@ async function processNightKill(game, groupId) {
   if (!checkWin(game, groupId)) await startDay(game, groupId);
 }
 
-async function startDay(game, groupId) {
+async function startDay(game: GameOngoing, groupId: number) {
   game.status = "day";
   game.dayVotes = new Map();
 
@@ -175,7 +204,7 @@ async function startDay(game, groupId) {
   game.dayProgressMsgId = sent.message_id;
 }
 
-async function updateDayProgress(game, groupId) {
+async function updateDayProgress(game: GameOngoing, groupId: number) {
   if (!game.dayProgressMsgId) return;
   const alive = game.players.filter((p) => p.alive).length;
   const voted = game.dayVotes.size;
@@ -192,7 +221,7 @@ async function updateDayProgress(game, groupId) {
       parse_mode: "Markdown",
       reply_markup: keyboard,
     });
-  } catch (e) {
+  } catch {
     const newSent = await bot.api.sendMessage(groupId, text, {
       parse_mode: "Markdown",
       reply_markup: keyboard,
@@ -201,13 +230,13 @@ async function updateDayProgress(game, groupId) {
   }
 }
 
-async function processDayLynch(game, groupId) {
-  const voteCounts = {};
+async function processDayLynch(game: GameOngoing, groupId: number) {
+  const voteCounts: Record<number, number> = {};
   for (const targetId of game.dayVotes.values()) {
     voteCounts[targetId] = (voteCounts[targetId] || 0) + 1;
   }
   let max = 0;
-  let candidates = [];
+  let candidates: number[] = [];
   for (const [tid, c] of Object.entries(voteCounts)) {
     const t = parseInt(tid);
     if (c > max) {
@@ -297,7 +326,7 @@ bot.on("callback_query", async (ctx) => {
   }
 });
 
-bot.command("newgame", async (ctx) => {
+m.command("newgame", async (ctx) => {
   if (!["group", "supergroup"].includes(ctx.chat.type))
     return ctx.reply("Use in group.");
   const gid = ctx.chat.id;
@@ -325,7 +354,7 @@ m.command("join", async (ctx) => {
   );
 });
 
-bot.command("players", (ctx) => {
+m.command("players", (ctx) => {
   const game = games.get(ctx.chat.id);
   if (!game) return ctx.reply("No game.");
   let msg = "Players:\n";
@@ -336,7 +365,7 @@ bot.command("players", (ctx) => {
   ctx.reply(msg);
 });
 
-bot.command("startgame", async (ctx) => {
+m.command("startgame", async (ctx) => {
   const gid = ctx.chat.id;
   const game = games.get(gid);
   if (!game || game.status !== "lobby" || game.players.length < 4)
@@ -355,20 +384,8 @@ bot.command("startgame", async (ctx) => {
   await startNight(game, gid);
 });
 
-bot.command("endgame", async (ctx) => {
-  const game = games.get(ctx.chat.id);
-  if (game) await endGame(ctx.chat.id);
-  else ctx.reply("No active game.");
-});
-
-bot.command(["start", "help"], (ctx) => {
-  ctx.reply(
-    "Mafia Bot (group only):\n" +
-      "/newgame → /join (≥4) → /startgame\n" +
-      "/players\n" +
-      "/endgame\n\n" +
-      "Night/Day: click inline buttons in chat. Progress updated. All actions visible in group.",
-  );
+m.command(["start", "help"], (ctx) => {
+  ctx.reply("/newgame");
 });
 
 const runner = run(bot);
