@@ -25,5 +25,5 @@ export async function handleNewGame(ctx: Context & { chat: Chat }) {
 
   await db.insert(lobbyGames).values({ chatId });
 
-  await ctx.reply("🃏 Mafia lobby created! /join to play. Min 4 players.");
+  await ctx.reply("🃏 Mafia lobby created! /join to play");
 }

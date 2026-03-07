@@ -1,7 +1,19 @@
+import type { LiveGameData, PlayerData } from "#db/schema";
 import { getUserDisplayName } from "#utils/user";
 
-export async function handleRevealRole({ player, game, ctx, userId }) {
+export async function handleRevealRole({
+  player,
+  game,
+  ctx,
+  userId,
+}: {
+  player: PlayerData;
+  game: LiveGameData;
+  ctx;
+  userId: number;
+}) {
   let text = `🃏 Your role: **${player.role.toUpperCase()}**`;
+
   if (player.role === "mafia") {
     const others =
       game.players

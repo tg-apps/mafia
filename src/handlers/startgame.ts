@@ -6,6 +6,8 @@ import { liveGames, players } from "#db/schema";
 import { startNight } from "#game";
 import { shuffle } from "#utils/shuffle";
 
+import { MIN_PLAYERS } from "../constants";
+
 export async function handleStartGame(ctx: Context & { chat: Chat }) {
   const chatId = ctx.chat.id;
 
@@ -15,8 +17,8 @@ export async function handleStartGame(ctx: Context & { chat: Chat }) {
 
   if (!game) return ctx.reply("No lobby.");
 
-  if (game.players.length < 4) {
-    return ctx.reply("Need at least 4 players to start a game.");
+  if (game.players.length < MIN_PLAYERS) {
+    return ctx.reply(`Need at least ${MIN_PLAYERS} players to start a game.`);
   }
 
   const mafiaCount = Math.max(1, Math.floor(game.players.length / 3));

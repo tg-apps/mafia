@@ -1,5 +1,6 @@
 import { InlineKeyboard } from "grammy";
 
+import type { LiveGameData } from "#db/schema";
 import { checkWin, startNight } from "#game";
 import { getUserDisplayName } from "#utils/user";
 
@@ -60,7 +61,19 @@ async function processDayLynch(game, chatId: number) {
   if (!checkWin(game, chatId)) await startNight(game, chatId);
 }
 
-export async function handleVote({ game, ctx, userId, data, chatId }) {
+export async function handleVote({
+  game,
+  ctx,
+  userId,
+  data,
+  chatId,
+}: {
+  game: LiveGameData;
+  userId: number;
+  data: string;
+  chatId: number;
+  ctx;
+}) {
   const targetId = parseInt(data.slice(5));
 
   const target = game.players.find((p) => p.id === targetId && p.alive);

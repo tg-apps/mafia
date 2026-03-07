@@ -23,7 +23,8 @@ export async function handleJoin(ctx: Context & { chat: Chat; from: User }) {
     return ctx.reply("Already joined.");
   }
 
-  db.update(lobbyGames)
+  await db
+    .update(lobbyGames)
     .set({ players: game.players.concat(ctx.from.id) })
     .where(eq(lobbyGames.id, game.id));
 
