@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import {
   sqliteTable,
   text,
@@ -24,19 +23,46 @@ export const lobbyGames = sqliteTable(
   "lobby_games",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    chatId: integer("chat_id").notNull(),
-    players: text("players", { mode: "json" })
-      .$type<number[]>()
-      .notNull()
-      .default(sql`(json_array())`),
+    chatId: integer("chat_id").notNull().unique(),
   },
   (table) => [index("idx_lobby_games_chat_id").on(table.chatId)],
 );
 
 export type LobbyGameData = (typeof lobbyGames)["$inferSelect"];
 
-export const players = sqliteTable(
-  "players",
+export const lobbyPlayers = sqliteTable(
+  "lobby_players",
+  {
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    gameId: integer("game_id")
+      .notNull()
+      .references(() => lobbyGames.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.gameId, table.userId] }),
+    index("idx_lobby_players_user_id").on(table.userId),
+    index("idx_lobby_players_game_id").on(table.gameId),
+  ],
+);
+
+export type LobbyPlayerData = (typeof lobbyPlayers)["$inferSelect"];
+
+export const liveGames = sqliteTable(
+  "live_games",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    chatId: integer("chat_id").notNull().unique(),
+    status: text("status", { enum: ["night", "day"] }).notNull(),
+  },
+  (table) => [index("idx_live_games_chat_id").on(table.chatId)],
+);
+
+export type LiveGameData = (typeof liveGames)["$inferSelect"];
+
+export const livePlayers = sqliteTable(
+  "live_players",
   {
     userId: integer("user_id")
       .notNull()
@@ -48,41 +74,10 @@ export const players = sqliteTable(
     alive: integer("alive", { mode: "boolean" }).notNull().default(true),
   },
   (table) => [
-    index("idx_players_user_id").on(table.userId),
-    index("idx_players_game_id").on(table.gameId),
     primaryKey({ columns: [table.gameId, table.userId] }),
+    index("idx_live_players_user_id").on(table.userId),
+    index("idx_live_players_game_id").on(table.gameId),
   ],
 );
 
-export type PlayerData = (typeof players)["$inferSelect"];
-
-export const liveGames = sqliteTable(
-  "live_games",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    chatId: integer("chat_id").notNull(),
-    players: text("players", { mode: "json" })
-      .$type<number[]>()
-      .notNull()
-      .default(sql`(json_array())`),
-    status: text("status", { enum: ["night", "day"] }).notNull(),
-  },
-  (table) => [index("idx_live_games_chat_id").on(table.chatId)],
-);
-
-export type LiveGameData = (typeof liveGames)["$inferSelect"];
-
-export const finishedGames = sqliteTable(
-  "finished_games",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    chatId: integer("chat_id").notNull(),
-    players: text("players", { mode: "json" })
-      .$type<number[]>()
-      .notNull()
-      .default(sql`(json_array())`),
-  },
-  (table) => [index("idx_finished_games_chat_id").on(table.chatId)],
-);
-
-export type FinishedGameData = (typeof finishedGames)["$inferSelect"];
+export type LivePlayerData = (typeof livePlayers)["$inferSelect"];

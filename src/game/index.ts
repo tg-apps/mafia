@@ -32,7 +32,6 @@ export function checkWin(game, chatId: number) {
 }
 
 export async function startNight(gameId: number, chatId: number) {
-  game.status = "night";
   game.mafiaVotes = new Map();
 
   const aliveMafia = game.players.filter((p) => p.alive && p.role === "mafia");

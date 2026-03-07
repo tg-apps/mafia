@@ -1,9 +1,8 @@
-import { eq } from "drizzle-orm";
 import type { Context } from "grammy";
 import type { Chat, User } from "grammy/types";
 
 import { db } from "#db";
-import { lobbyGames } from "#db/schema";
+import { lobbyPlayers } from "#db/schema";
 import { getUserDisplayName, upsertUser } from "#utils/user";
 
 export async function handleJoin(ctx: Context & { chat: Chat; from: User }) {
@@ -11,6 +10,7 @@ export async function handleJoin(ctx: Context & { chat: Chat; from: User }) {
 
   if (!["group", "supergroup"].includes(ctx.chat.type)) return;
 
+  const userId = ctx.from.id;
   const chatId = ctx.chat.id;
 
   const game = await db.query.lobbyGames.findFirst({
@@ -19,18 +19,23 @@ export async function handleJoin(ctx: Context & { chat: Chat; from: User }) {
 
   if (!game) return ctx.reply("No lobby.");
 
-  if (game.players.some((userId) => userId === ctx.from.id)) {
+  const gameId = game.id;
+
+  const players = await db.query.lobbyPlayers.findMany({
+    where: (lobbyPlayers, { eq }) => eq(lobbyPlayers.gameId, gameId),
+  });
+
+  if (players.some((p) => p.userId === userId)) {
     return ctx.reply("Already joined.");
   }
 
-  await db
-    .update(lobbyGames)
-    .set({ players: game.players.concat(ctx.from.id) })
-    .where(eq(lobbyGames.id, game.id));
-
-  const total = game.players.length + 1;
+  const total = await db
+    .insert(lobbyPlayers)
+    .values({ userId, gameId })
+    .onConflictDoNothing()
+    .returning();
 
   await ctx.reply(
-    `✅ ${getUserDisplayName(ctx.from)} joined! (${total} total)`,
+    `✅ ${getUserDisplayName(ctx.from)} joined! (${total.length} total)`,
   );
 }

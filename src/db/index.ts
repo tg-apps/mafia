@@ -18,46 +18,42 @@ sqlite.run(`
 
   CREATE INDEX IF NOT EXISTS idx_users_user_id ON users(user_id);
 
-
   CREATE TABLE IF NOT EXISTS lobby_games (
     id      INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    chat_id INTEGER NOT NULL,
-    players TEXT    NOT NULL DEFAULT (json_array())
+    chat_id INTEGER NOT NULL UNIQUE
   ) STRICT;
 
   CREATE INDEX IF NOT EXISTS idx_lobby_games_chat_id ON lobby_games(chat_id);
 
+  CREATE TABLE IF NOT EXISTS lobby_players (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    game_id INTEGER NOT NULL REFERENCES lobby_games(id) ON DELETE CASCADE,
+
+    PRIMARY KEY (game_id, user_id)
+  ) STRICT;
+
+  CREATE INDEX IF NOT EXISTS idx_lobby_players_user_id ON lobby_players(user_id);
+  CREATE INDEX IF NOT EXISTS idx_lobby_players_game_id ON lobby_players(game_id);
 
   CREATE TABLE IF NOT EXISTS live_games (
     id      INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    chat_id INTEGER NOT NULL,
-    players TEXT    NOT NULL DEFAULT (json_array()),
+    chat_id INTEGER NOT NULL UNIQUE,
     status  TEXT    NOT NULL CHECK(status IN ('night', 'day'))
   ) STRICT;
 
   CREATE INDEX IF NOT EXISTS idx_live_games_chat_id ON live_games(chat_id);
 
-
-  CREATE TABLE IF NOT EXISTS finished_games (
-    id      INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    chat_id INTEGER NOT NULL,
-    players TEXT    NOT NULL DEFAULT (json_array())
-  ) STRICT;
-
-  CREATE INDEX IF NOT EXISTS idx_finished_games_chat_id ON finished_games(chat_id);
-
-
-  CREATE TABLE IF NOT EXISTS players (
-    user_id INTEGER NOT NULL REFERENCES users(id)         ON DELETE RESTRICT,
-    game_id INTEGER NOT NULL REFERENCES live_games(id)    ON DELETE CASCADE,
-    role    TEXT    NOT NULL CHECK(role IN ('mafia', 'villager')),
-    alive   INTEGER NOT NULL DEFAULT 1 CHECK(alive IN (0, 1)),
+  CREATE TABLE IF NOT EXISTS live_players (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    game_id INTEGER NOT NULL REFERENCES live_games(id) ON DELETE CASCADE,
+    role    TEXT    NOT NULL CHECK(role IN ('mafia','villager')),
+    alive   INTEGER NOT NULL DEFAULT 1 CHECK(alive IN (0,1)),
 
     PRIMARY KEY (game_id, user_id)
   ) STRICT;
 
-  CREATE INDEX IF NOT EXISTS idx_players_user_id  ON players(user_id);
-  CREATE INDEX IF NOT EXISTS idx_players_game_id  ON players(game_id);
+  CREATE INDEX IF NOT EXISTS idx_live_players_user_id ON live_players(user_id);
+  CREATE INDEX IF NOT EXISTS idx_live_players_game_id ON live_players(game_id);
 `);
 
 const db = drizzle(sqlite, { schema });
