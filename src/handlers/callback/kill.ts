@@ -26,7 +26,7 @@ async function startDay(gameId: number, chatId: number) {
   game.dayProgressMsgId = sent.message_id;
 }
 
-async function processNightKill(game, chatId: number) {
+async function processNightKill(gameId: number, chatId: number) {
   const voteCounts: Record<number, number> = {};
   for (const targetId of game.mafiaVotes.values()) {
     voteCounts[targetId] = (voteCounts[targetId] || 0) + 1;
@@ -70,7 +70,7 @@ async function updateNightProgress(game, chatId: number) {
   );
   const keyboard = new InlineKeyboard();
   aliveVill.forEach((v) =>
-    keyboard.text(getDisplayName(v), `kill_${v.id}`).row(),
+    keyboard.text(getUserDisplayName(v), `kill_${v.id}`).row(),
   );
 
   try {
@@ -88,7 +88,7 @@ async function updateNightProgress(game, chatId: number) {
   }
 }
 
-export async function handleKill({ player, game, ctx, userId, data }) {
+export async function handleKill({ player, game, ctx, userId, data, chatId }) {
   if (player.role !== "mafia")
     return ctx.answerCallbackQuery("Only Mafia can do this.");
 

@@ -2,6 +2,7 @@ import type { Context } from "grammy";
 import type { CallbackQuery, User } from "grammy/types";
 
 import { db } from "#db";
+import { upsertUser } from "#utils/user";
 
 import { handleKill } from "./kill";
 import { handleRevealRole } from "./reveal-role";
@@ -13,6 +14,8 @@ export async function handleCallback(
   const data = ctx.callbackQuery.data || "";
   const userId = ctx.from.id;
   const chatId = ctx.chat!.id;
+
+  upsertUser(ctx.from);
 
   const game = await db.query.liveGames.findFirst({
     where: (liveGames, { eq }) => eq(liveGames.chatId, chatId),
@@ -30,17 +33,17 @@ export async function handleCallback(
   }
 
   if (data === "reveal_role") {
-    handleRevealRole({ player, game, ctx, userId });
+    await handleRevealRole({ player, game, ctx, userId });
     return;
   }
 
   if (data.startsWith("kill_") && game.status === "night") {
-    handleKill({ player, game, ctx, userId, data });
+    await handleKill({ player, game, ctx, userId, data, chatId });
     return;
   }
 
   if (data.startsWith("vote_") && game.status === "day") {
-    handleVote({ chatId, game, ctx, userId, data });
+    await handleVote({ chatId, game, ctx, userId, data });
     return;
   }
 }

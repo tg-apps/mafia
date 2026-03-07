@@ -4,9 +4,11 @@ import type { Chat, User } from "grammy/types";
 
 import { db } from "#db";
 import { lobbyGames } from "#db/schema";
-import { getUserDisplayName } from "#utils/user";
+import { getUserDisplayName, upsertUser } from "#utils/user";
 
 export async function handleJoin(ctx: Context & { chat: Chat; from: User }) {
+  upsertUser(ctx.from);
+
   if (!["group", "supergroup"].includes(ctx.chat.type)) return;
 
   const chatId = ctx.chat.id;
@@ -25,7 +27,9 @@ export async function handleJoin(ctx: Context & { chat: Chat; from: User }) {
     .set({ players: game.players.concat(ctx.from.id) })
     .where(eq(lobbyGames.id, game.id));
 
+  const total = game.players.length + 1;
+
   await ctx.reply(
-    `✅ ${getUserDisplayName(ctx.from)} joined! (${game.players.length} total)`,
+    `✅ ${getUserDisplayName(ctx.from)} joined! (${total} total)`,
   );
 }

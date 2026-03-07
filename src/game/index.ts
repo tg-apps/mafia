@@ -49,7 +49,7 @@ export async function startNight(gameId: number, chatId: number) {
     keyboard.text(getUserDisplayName(v), `kill_${v.id}`).row();
   });
 
-  const sent = await bot.api.sendMessage(
+  await bot.api.sendMessage(
     chatId,
     "🌙 **Night phase**\nMafia: choose target to kill (only your clicks count)\nVotes: 0/" +
       aliveMafia.length,

@@ -1,6 +1,8 @@
 import { run } from "@grammyjs/runner";
 import { Bot, GrammyError } from "grammy";
 
+import { upsertUser } from "#utils/user";
+
 import { handleCallback } from "./handlers/callback";
 import { handleJoin } from "./handlers/join";
 import { handleNewGame } from "./handlers/newgame";
@@ -22,8 +24,17 @@ m.command("join", handleJoin);
 m.command("startgame", handleStartGame);
 
 m.command(["start", "help"], (ctx) => {
+  upsertUser(ctx.from);
   return ctx.reply("/newgame");
 });
+
+void bot.api.setMyCommands([
+  { command: "start", description: "Помощь" },
+  { command: "help", description: "Помощь" },
+  { command: "newgame", description: "Создать игру" },
+  { command: "join", description: "Присоединиться к игре" },
+  { command: "startgame", description: "Запустить игру" },
+]);
 
 const runner = run(bot);
 const stopRunner = () => runner.isRunning() && runner.stop();

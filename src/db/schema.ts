@@ -18,6 +18,8 @@ export const users = sqliteTable(
   (table) => [index("idx_users_user_id").on(table.userId)],
 );
 
+export type UserData = (typeof users)["$inferSelect"];
+
 export const lobbyGames = sqliteTable(
   "lobby_games",
   {
@@ -30,6 +32,8 @@ export const lobbyGames = sqliteTable(
   },
   (table) => [index("idx_lobby_games_chat_id").on(table.chatId)],
 );
+
+export type LobbyGameData = (typeof lobbyGames)["$inferSelect"];
 
 export const players = sqliteTable(
   "players",
@@ -50,6 +54,8 @@ export const players = sqliteTable(
   ],
 );
 
+export type PlayerData = (typeof players)["$inferSelect"];
+
 export const liveGames = sqliteTable(
   "live_games",
   {
@@ -64,6 +70,8 @@ export const liveGames = sqliteTable(
   (table) => [index("idx_live_games_chat_id").on(table.chatId)],
 );
 
+export type LiveGameData = (typeof liveGames)["$inferSelect"];
+
 export const finishedGames = sqliteTable(
   "finished_games",
   {
@@ -76,3 +84,5 @@ export const finishedGames = sqliteTable(
   },
   (table) => [index("idx_finished_games_chat_id").on(table.chatId)],
 );
+
+export type FinishedGameData = (typeof finishedGames)["$inferSelect"];

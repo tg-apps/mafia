@@ -5,8 +5,9 @@ import { db } from "#db";
 import { lobbyGames } from "#db/schema";
 
 export async function handleNewGame(ctx: Context & { chat: Chat }) {
-  if (!["group", "supergroup"].includes(ctx.chat.type))
+  if (!["group", "supergroup"].includes(ctx.chat.type)) {
     return ctx.reply("Use in group.");
+  }
 
   const chatId = ctx.chat.id;
 
