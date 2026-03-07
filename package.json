@@ -2,20 +2,29 @@
   "name": "mafiabot",
   "private": true,
   "type": "module",
+  "imports": {
+    "#db": "./src/db/index.ts",
+    "#db/schema": "./src/db/schema.ts",
+    "#utils/*": "./src/utils/*.ts",
+    "#game": "./src/game/index.ts"
+  },
   "scripts": {
     "test": "bun test --coverage",
     "format": "oxfmt --list-different || oxfmt",
+    "lint": "oxlint",
     "dev": "NODE_ENV=development bun run ./src/index.ts",
     "build": "NODE_ENV=production bun build --minify --compile ./src/index.ts --outfile=dist/bot --target=bun-linux-arm64"
   },
   "dependencies": {
     "@grammyjs/runner": "^2.0.3",
     "drizzle-orm": "^0.45.1",
-    "grammy": "^1.40.0"
+    "grammy": "^1.41.1"
   },
   "devDependencies": {
-    "@types/bun": "^1.3.9",
-    "oxfmt": "^0.31.0",
+    "@types/bun": "^1.3.10",
+    "oxfmt": "^0.36.0",
+    "oxlint": "^1.51.0",
+    "oxlint-tsgolint": "^0.16.0",
     "typescript": "^5.9.3"
   }
 }
