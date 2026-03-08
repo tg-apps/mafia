@@ -96,7 +96,6 @@ export async function handleKill(
   ctx: Context,
   {
     player,
-    userId,
     data,
     gameId,
     players,
@@ -104,7 +103,6 @@ export async function handleKill(
     player: LivePlayerData;
     gameId: number;
     data: string;
-    userId: number;
     players: LivePlayerData[];
   },
 ) {
@@ -119,7 +117,7 @@ export async function handleKill(
 
   if (!target) return ctx.answerCallbackQuery("Invalid target.");
 
-  game.mafiaVotes.set(userId, targetId);
+  game.mafiaVotes.set(player.userId, targetId);
   await ctx.answerCallbackQuery(
     `You voted to kill ${getUserDisplayName(targetId)}.`,
   );

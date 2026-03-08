@@ -38,12 +38,12 @@ export async function handleCallback(
   }
 
   if (data === "reveal_role") {
-    await handleRevealRole(ctx, { player, players, userId });
+    await handleRevealRole(ctx, { player, players });
     return;
   }
 
   if (data.startsWith("kill:") && game.status === "night") {
-    await handleKill(ctx, { player, userId, data, gameId, players });
+    await handleKill(ctx, { player, data, gameId, players });
     return;
   }
 

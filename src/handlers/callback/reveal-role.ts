@@ -5,18 +5,16 @@ import { getUserDisplayName } from "#utils/user";
 
 export async function handleRevealRole(
   ctx: Context,
-  {
-    player,
-    players,
-    userId,
-  }: { player: LivePlayerData; players: LivePlayerData[]; userId: number },
+  { player, players }: { player: LivePlayerData; players: LivePlayerData[] },
 ) {
   let text = `🃏 Your role: **${player.role.toUpperCase()}**`;
 
   if (player.role === "mafia") {
     const others =
       players
-        .filter((p) => p.userId !== userId && p.role === "mafia" && p.alive)
+        .filter(
+          (p) => p.userId !== player.userId && p.role === "mafia" && p.alive,
+        )
         .map(({ userId }) => getUserDisplayName(userId))
         .join(", ") || "none";
     text += `\nOther Mafia: ${others}`;
