@@ -6,7 +6,8 @@
     "#db": "./src/db/index.ts",
     "#db/schema": "./src/db/schema.ts",
     "#utils/*": "./src/utils/*.ts",
-    "#game": "./src/game/index.ts"
+    "#game": "./src/game/index.ts",
+    "#constants": "./src/constants.ts"
   },
   "scripts": {
     "test": "bun test --coverage",

@@ -19,6 +19,16 @@ export function upsertUser(user: User): UserData {
     .get();
 }
 
-export function getUserDisplayName(user: User): string {
-  return user.username ? `@${user.username}` : user.first_name;
+export function getUserDisplayName(userId: number | User): string {
+  if (typeof userId !== "number") {
+    return userId.username ? `@${userId.username}` : userId.first_name;
+  }
+
+  const user = db.query.users
+    .findFirst({ where: (users, { eq }) => eq(users.userId, userId) })
+    .sync();
+
+  if (!user) return `User ${userId}`;
+
+  return user.username ? `@${user.username}` : user.firstName;
 }

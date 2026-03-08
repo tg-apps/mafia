@@ -1,37 +1,27 @@
-import { InlineKeyboard } from "grammy";
+import { Context, InlineKeyboard } from "grammy";
 
-import type { LiveGameData } from "#db/schema";
+import type { LivePlayerData } from "#db/schema";
 import { checkWin, startNight } from "#game";
 import { getUserDisplayName } from "#utils/user";
 
-async function updateDayProgress(game, chatId: number) {
-  if (!game.dayProgressMsgId) return;
-
-  const alive = game.players.filter((p) => p.alive).length;
+async function updateDayProgress(ctx: Context, players: LivePlayerData[]) {
+  const alive = players.filter((p) => p.alive).length;
   const voted = game.dayVotes.size;
   const text = `☀️ **Day phase**\nVotes cast: ${voted}/${alive}`;
 
-  const alivePlayers = game.players.filter((p) => p.alive);
+  const alivePlayers = players.filter((p) => p.alive);
   const keyboard = new InlineKeyboard();
-  alivePlayers.forEach((p) =>
-    keyboard.text(getUserDisplayName(p), `vote_${p.id}`).row(),
+  alivePlayers.forEach(({ userId }) =>
+    keyboard.text(getUserDisplayName(userId), `vote:${userId}`).row(),
   );
 
-  try {
-    await bot.api.editMessageText(chatId, game.dayProgressMsgId, text, {
-      parse_mode: "Markdown",
-      reply_markup: keyboard,
-    });
-  } catch {
-    const newSent = await bot.api.sendMessage(chatId, text, {
-      parse_mode: "Markdown",
-      reply_markup: keyboard,
-    });
-    game.dayProgressMsgId = newSent.message_id;
-  }
+  await ctx.reply(text, { parse_mode: "Markdown", reply_markup: keyboard });
 }
 
-async function processDayLynch(game, chatId: number) {
+async function processDayLynch(
+  ctx: Context,
+  { players, gameId }: { players: LivePlayerData[]; gameId: number },
+) {
   const voteCounts: Record<number, number> = {};
   for (const targetId of game.dayVotes.values()) {
     voteCounts[targetId] = (voteCounts[targetId] || 0) + 1;
@@ -45,48 +35,53 @@ async function processDayLynch(game, chatId: number) {
       candidates = [t];
     } else if (c === max) candidates.push(t);
   }
+
   if (candidates.length === 0) {
-    await bot.api.sendMessage(chatId, "☀️ No lynch.");
+    await ctx.reply("☀️ No lynch.");
   } else {
     const lynchId = candidates[Math.floor(Math.random() * candidates.length)];
-    const lynched = game.players.find((p) => p.id === lynchId);
+    const lynched = players.find((p) => p.userId === lynchId);
     if (lynched) {
       lynched.alive = false;
-      await bot.api.sendMessage(
-        chatId,
-        `☀️ **${getUserDisplayName(lynched)}** was lynched.\nRole: **${lynched.role.toUpperCase()}**`,
+      await ctx.reply(
+        `☀️ **${getUserDisplayName(lynched.userId)}** was lynched.\nRole: **${lynched.role.toUpperCase()}**`,
       );
     }
   }
-  if (!checkWin(game, chatId)) await startNight(game, chatId);
+
+  if (!checkWin(ctx, { gameId, players })) {
+    await startNight(ctx, gameId);
+  }
 }
 
-export async function handleVote({
-  game,
-  ctx,
-  userId,
-  data,
-  chatId,
-}: {
-  game: LiveGameData;
-  userId: number;
-  data: string;
-  chatId: number;
-  ctx;
-}) {
+export async function handleVote(
+  ctx: Context,
+  {
+    userId,
+    data,
+    players,
+    gameId,
+  }: {
+    userId: number;
+    data: string;
+    players: LivePlayerData[];
+    gameId: number;
+  },
+) {
   const targetId = parseInt(data.slice(5));
 
-  const target = game.players.find((p) => p.id === targetId && p.alive);
+  const target = players.find((p) => p.userId === targetId && p.alive);
 
   if (!target) return ctx.answerCallbackQuery("Invalid target.");
 
   game.dayVotes.set(userId, targetId);
-  await ctx.answerCallbackQuery(`Voted for ${getUserDisplayName(target)}.`);
+  await ctx.answerCallbackQuery(`Voted for ${getUserDisplayName(targetId)}.`);
 
-  await updateDayProgress(game, chatId);
+  await updateDayProgress(ctx, players);
 
-  const aliveCount = game.players.filter((p) => p.alive).length;
+  const aliveCount = players.filter((p) => p.alive).length;
+
   if (game.dayVotes.size === aliveCount) {
-    await processDayLynch(game, chatId);
+    await processDayLynch(ctx, { players, gameId });
   }
 }

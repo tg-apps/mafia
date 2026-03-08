@@ -11,9 +11,11 @@ import { handleVote } from "./vote";
 export async function handleCallback(
   ctx: Context & { callbackQuery: CallbackQuery; from: User },
 ) {
-  const data = ctx.callbackQuery.data || "";
+  if (!ctx.chat || !ctx.callbackQuery.data) return;
+
+  const data = ctx.callbackQuery.data;
   const userId = ctx.from.id;
-  const chatId = ctx.chat!.id;
+  const chatId = ctx.chat.id;
 
   upsertUser(ctx.from);
 
@@ -23,27 +25,30 @@ export async function handleCallback(
 
   if (!game) return ctx.answerCallbackQuery("No game here.");
 
-  const player = await db.query.players.findFirst({
-    where: (players, { eq, and }) =>
-      and(eq(players.gameId, game.id), eq(players.userId, userId)),
+  const gameId = game.id;
+
+  const players = await db.query.livePlayers.findMany({
+    where: (livePlayers, { eq }) => eq(livePlayers.gameId, gameId),
   });
+
+  const player = players.find((p) => p.userId === userId);
 
   if (!player || !player.alive) {
     return ctx.answerCallbackQuery("You are not alive.");
   }
 
   if (data === "reveal_role") {
-    await handleRevealRole({ player, game, ctx, userId });
+    await handleRevealRole(ctx, { player, players, userId });
     return;
   }
 
-  if (data.startsWith("kill_") && game.status === "night") {
-    await handleKill({ player, game, ctx, userId, data, chatId });
+  if (data.startsWith("kill:") && game.status === "night") {
+    await handleKill(ctx, { player, userId, data, gameId, players });
     return;
   }
 
-  if (data.startsWith("vote_") && game.status === "day") {
-    await handleVote({ chatId, game, ctx, userId, data });
+  if (data.startsWith("vote:") && game.status === "day") {
+    await handleVote(ctx, { userId, data, players, gameId });
     return;
   }
 }

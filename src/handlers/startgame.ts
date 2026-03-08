@@ -2,23 +2,22 @@ import { eq } from "drizzle-orm";
 import { InlineKeyboard, type Context } from "grammy";
 import type { Chat } from "grammy/types";
 
+import { MIN_PLAYERS } from "#constants";
 import { db } from "#db";
 import { liveGames, livePlayers, lobbyGames, lobbyPlayers } from "#db/schema";
 import { startNight } from "#game";
 import { getRoles } from "#utils/get-roles";
 
-import { MIN_PLAYERS } from "../constants";
-
 export async function handleStartGame(ctx: Context & { chat: Chat }) {
   const chatId = ctx.chat.id;
 
-  const game = await db.query.lobbyGames.findFirst({
+  const lobby = await db.query.lobbyGames.findFirst({
     where: (lobbyGames, { eq }) => eq(lobbyGames.chatId, chatId),
   });
 
-  if (!game) return ctx.reply("No lobby.");
+  if (!lobby) return ctx.reply("No lobby.");
 
-  const gameId = game.id;
+  const gameId = lobby.id;
 
   const players = await db.query.lobbyPlayers.findMany({
     where: (lobbyPlayers, { eq }) => eq(lobbyPlayers.gameId, gameId),
@@ -31,7 +30,11 @@ export async function handleStartGame(ctx: Context & { chat: Chat }) {
   const roles = getRoles(players.length);
 
   // Create live game
-  await db.insert(liveGames).values({ chatId, status: "night" });
+  const game = db
+    .insert(liveGames)
+    .values({ chatId, status: "night" })
+    .returning()
+    .get();
 
   // Delete lobby game
   await db.delete(lobbyGames).where(eq(lobbyGames.chatId, chatId));
@@ -49,5 +52,5 @@ export async function handleStartGame(ctx: Context & { chat: Chat }) {
   const keyboard = new InlineKeyboard().text("Reveal my role", "reveal_role");
   await ctx.reply("🃏 Click to see your role", { reply_markup: keyboard });
 
-  await startNight(gameId, chatId);
+  await startNight(ctx, game.id);
 }

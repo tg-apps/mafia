@@ -1,33 +1,44 @@
-import { InlineKeyboard } from "grammy";
+import { eq } from "drizzle-orm";
+import { Context, InlineKeyboard } from "grammy";
 
+import { db } from "#db";
+import { liveGames, type LivePlayerData } from "#db/schema";
 import { checkWin } from "#game";
 import { getUserDisplayName } from "#utils/user";
 
-async function startDay(gameId: number, chatId: number) {
-  game.status = "day";
-  game.dayVotes = new Map();
+async function startDay(
+  ctx: Context,
+  { gameId, players }: { gameId: number; players: LivePlayerData[] },
+) {
+  await db
+    .update(liveGames)
+    .set({ status: "day" })
+    .where(eq(liveGames.id, gameId));
 
-  const alive = game.players.filter((p) => p.alive);
+  const alive = players.filter((p) => p.alive);
+
   if (alive.length <= 1) {
-    checkWin(game, chatId);
+    await checkWin(ctx, { players, gameId });
     return;
   }
 
   const keyboard = new InlineKeyboard();
-  alive.forEach((p) =>
-    keyboard.text(getUserDisplayName(p), `vote_${p.id}`).row(),
+  alive.forEach(({ userId }) =>
+    keyboard.text(getUserDisplayName(userId), `vote:${userId}`).row(),
   );
 
-  const sent = await bot.api.sendMessage(
-    chatId,
+  await ctx.reply(
     `☀️ **Day phase**\nVote to lynch (click button)\nVotes: 0/${alive.length}`,
     { parse_mode: "Markdown", reply_markup: keyboard },
   );
-  game.dayProgressMsgId = sent.message_id;
 }
 
-async function processNightKill(gameId: number, chatId: number) {
+async function processNightKill(
+  ctx: Context,
+  { gameId, players }: { gameId: number; players: LivePlayerData[] },
+) {
   const voteCounts: Record<number, number> = {};
+
   for (const targetId of game.mafiaVotes.values()) {
     voteCounts[targetId] = (voteCounts[targetId] || 0) + 1;
   }
@@ -41,74 +52,85 @@ async function processNightKill(gameId: number, chatId: number) {
     } else if (c === max) candidates.push(t);
   }
   if (candidates.length === 0) {
-    await bot.api.sendMessage(chatId, "🌙 No kill tonight.");
+    await ctx.reply("🌙 No kill tonight.");
   } else {
     const killId = candidates[Math.floor(Math.random() * candidates.length)];
-    const killed = game.players.find((p) => p.id === killId);
+    const killed = players.find((p) => p.userId === killId);
     if (killed) {
       killed.alive = false;
-      await bot.api.sendMessage(
-        chatId,
-        `🌙 **${getUserDisplayName(killed)}** was killed.\nRole: **${killed.role.toUpperCase()}**`,
+      await ctx.reply(
+        `🌙 **${getUserDisplayName(killed.userId)}** was killed.\nRole: **${killed.role.toUpperCase()}**`,
       );
     }
   }
-  if (!checkWin(game, chatId)) await startDay(game, chatId);
-}
 
-async function updateNightProgress(game, chatId: number) {
-  if (!game.nightProgressMsgId) return;
-
-  const aliveMafia = game.players.filter(
-    (p) => p.alive && p.role === "mafia",
-  ).length;
-  const voted = game.mafiaVotes.size;
-  const text = `🌙 **Night phase**\nMafia votes: ${voted}/${aliveMafia}`;
-
-  const aliveVill = game.players.filter(
-    (p) => p.alive && p.role === "villager",
-  );
-  const keyboard = new InlineKeyboard();
-  aliveVill.forEach((v) =>
-    keyboard.text(getUserDisplayName(v), `kill_${v.id}`).row(),
-  );
-
-  try {
-    await bot.api.editMessageText(chatId, game.nightProgressMsgId, text, {
-      parse_mode: "Markdown",
-      reply_markup: keyboard,
-    });
-  } catch {
-    // fallback: send new if edit fails
-    const newSent = await bot.api.sendMessage(chatId, text, {
-      parse_mode: "Markdown",
-      reply_markup: keyboard,
-    });
-    game.nightProgressMsgId = newSent.message_id;
+  if (!(await checkWin(ctx, { gameId, players }))) {
+    await startDay(ctx, { gameId, players });
   }
 }
 
-export async function handleKill({ player, game, ctx, userId, data, chatId }) {
-  if (player.role !== "mafia")
+async function updateNightProgress({
+  ctx,
+  players,
+}: {
+  ctx: Context;
+  players: LivePlayerData[];
+}) {
+  const aliveMafia = players.filter(
+    (p) => p.alive && p.role === "mafia",
+  ).length;
+
+  const voted = game.mafiaVotes.size;
+  const text = `🌙 **Night phase**\nMafia votes: ${voted}/${aliveMafia}`;
+
+  const aliveVill = players.filter((p) => p.alive && p.role === "villager");
+  const keyboard = new InlineKeyboard();
+  aliveVill.forEach(({ userId }) =>
+    keyboard.text(getUserDisplayName(userId), `kill:${userId}`).row(),
+  );
+
+  await ctx.reply(text, { parse_mode: "Markdown", reply_markup: keyboard });
+}
+
+export async function handleKill(
+  ctx: Context,
+  {
+    player,
+    userId,
+    data,
+    gameId,
+    players,
+  }: {
+    player: LivePlayerData;
+    gameId: number;
+    data: string;
+    userId: number;
+    players: LivePlayerData[];
+  },
+) {
+  if (player.role !== "mafia") {
     return ctx.answerCallbackQuery("Only Mafia can do this.");
+  }
 
   const targetId = parseInt(data.slice(5));
-  const target = game.players.find(
-    (p) => p.id === targetId && p.alive && p.role === "villager",
+  const target = players.find(
+    (p) => p.userId === targetId && p.alive && p.role === "villager",
   );
+
   if (!target) return ctx.answerCallbackQuery("Invalid target.");
 
   game.mafiaVotes.set(userId, targetId);
   await ctx.answerCallbackQuery(
-    `You voted to kill ${getUserDisplayName(target)}.`,
+    `You voted to kill ${getUserDisplayName(targetId)}.`,
   );
 
-  await updateNightProgress(game, chatId);
+  await updateNightProgress({ ctx, players });
 
-  const mafiaAlive = game.players.filter(
+  const mafiaAlive = players.filter(
     (p) => p.alive && p.role === "mafia",
   ).length;
+
   if (game.mafiaVotes.size === mafiaAlive) {
-    await processNightKill(game, chatId);
+    await processNightKill(ctx, { gameId, players });
   }
 }
