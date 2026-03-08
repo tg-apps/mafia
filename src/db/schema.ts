@@ -35,7 +35,7 @@ export const lobbyPlayers = sqliteTable(
   {
     userId: integer("user_id")
       .notNull()
-      .references(() => users.id, { onDelete: "restrict" }),
+      .references(() => users.userId, { onDelete: "restrict" }),
     gameId: integer("game_id")
       .notNull()
       .references(() => lobbyGames.id, { onDelete: "cascade" }),
@@ -66,7 +66,7 @@ export const livePlayers = sqliteTable(
   {
     userId: integer("user_id")
       .notNull()
-      .references(() => users.id, { onDelete: "restrict" }),
+      .references(() => users.userId, { onDelete: "restrict" }),
     gameId: integer("game_id")
       .notNull()
       .references(() => liveGames.id, { onDelete: "cascade" }),

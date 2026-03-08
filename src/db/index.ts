@@ -26,7 +26,7 @@ sqlite.run(`
   CREATE INDEX IF NOT EXISTS idx_lobby_games_chat_id ON lobby_games(chat_id);
 
   CREATE TABLE IF NOT EXISTS lobby_players (
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE RESTRICT,
     game_id INTEGER NOT NULL REFERENCES lobby_games(id) ON DELETE CASCADE,
 
     PRIMARY KEY (game_id, user_id)
@@ -44,7 +44,7 @@ sqlite.run(`
   CREATE INDEX IF NOT EXISTS idx_live_games_chat_id ON live_games(chat_id);
 
   CREATE TABLE IF NOT EXISTS live_players (
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE RESTRICT,
     game_id INTEGER NOT NULL REFERENCES live_games(id) ON DELETE CASCADE,
     role    TEXT    NOT NULL CHECK(role IN ('mafia','villager')),
     alive   INTEGER NOT NULL DEFAULT 1 CHECK(alive IN (0,1)),

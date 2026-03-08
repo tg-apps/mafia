@@ -17,7 +17,7 @@ export async function handleJoin(ctx: Context & { chat: Chat; from: User }) {
     where: (lobbyGames, { eq }) => eq(lobbyGames.chatId, chatId),
   });
 
-  if (!game) return ctx.reply("No lobby.");
+  if (!game) return ctx.reply("No lobby. Use /newgame to create one.");
 
   const gameId = game.id;
 
