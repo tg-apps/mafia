@@ -31,9 +31,9 @@ m.command(["start", "help"], (ctx) => {
 void bot.api.setMyCommands([
   { command: "start", description: "Помощь" },
   { command: "help", description: "Помощь" },
-  { command: "newgame", description: "Создать игру" },
-  { command: "join", description: "Присоединиться к игре" },
-  { command: "startgame", description: "Запустить игру" },
+  { command: "newgame", description: "Создать игру в мафию" },
+  { command: "join", description: "Присоединиться к игре в мафию" },
+  { command: "startgame", description: "Запустить игру в мафию" },
 ]);
 
 const runner = run(bot);
