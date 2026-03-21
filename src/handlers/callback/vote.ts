@@ -86,9 +86,11 @@ async function processDayLynch(
     .from(schema.livePlayers)
     .where(eq(schema.livePlayers.gameId, gameId));
 
-  if (!checkWin(ctx, { gameId, players: updatedPlayers })) {
-    await startNight(ctx, gameId);
-  }
+  const isWin = await checkWin(ctx, { gameId, players: updatedPlayers });
+
+  if (isWin) return;
+
+  await startNight(ctx, gameId);
 }
 
 export async function handleVote(

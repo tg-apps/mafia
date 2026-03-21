@@ -1,25 +1,12 @@
 import type { Context } from "grammy";
 
 import type { LivePlayerData } from "#db/schema";
-import { getUserDisplayName } from "#utils/user";
 
 export async function handleRevealRole(
   ctx: Context,
-  { player, players }: { player: LivePlayerData; players: LivePlayerData[] },
+  { player }: { player: LivePlayerData },
 ) {
-  let text = `🃏 Your role: **${player.role.toUpperCase()}**`;
-
-  if (player.role === "mafia") {
-    const others =
-      players
-        .filter(
-          (p) => p.userId !== player.userId && p.role === "mafia" && p.alive,
-        )
-        .map(({ userId }) => getUserDisplayName(userId))
-        .join(", ") || "none";
-    text += `\nOther Mafia: ${others}`;
-  }
-
+  let text = `🃏 Your role: ${player.role}`;
   text += player.alive ? "\nYou are alive." : "\nYou are dead.";
   await ctx.answerCallbackQuery({ text, show_alert: true });
 }

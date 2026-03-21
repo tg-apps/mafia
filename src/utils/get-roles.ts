@@ -5,13 +5,9 @@ import { shuffle } from "./shuffle";
 export type PlayerRole = LivePlayerData["role"];
 
 export function getRoles(playerCount: number): PlayerRole[] {
-  const mafiaCount = Math.max(1, Math.floor(playerCount / 3));
+  const roles = Array<PlayerRole>(1)
+    .fill("mafia")
+    .concat(Array(playerCount - 1).fill("villager"));
 
-  const roles = shuffle(
-    Array<PlayerRole>(mafiaCount)
-      .fill("mafia")
-      .concat(Array(playerCount - mafiaCount).fill("villager")),
-  );
-
-  return roles;
+  return shuffle(roles);
 }

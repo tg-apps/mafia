@@ -23,7 +23,15 @@ export async function handleNewGame(ctx: Context & { chat: Chat }) {
 
   if (liveGame) return ctx.reply("Game already running. Wait for next game.");
 
-  await db.insert(lobbyGames).values({ chatId });
+  const created = await db
+    .insert(lobbyGames)
+    .values({ chatId })
+    .onConflictDoNothing()
+    .returning();
 
-  await ctx.reply("🃏 Mafia lobby created! /join to play");
+  if (!created.length) {
+    return ctx.reply("Lobby already exists. Use /join to join.");
+  }
+
+  await ctx.reply("🃏 Mafia lobby created! /join to join");
 }

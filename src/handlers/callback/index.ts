@@ -38,7 +38,7 @@ export async function handleCallback(
   }
 
   if (data === "reveal_role") {
-    await handleRevealRole(ctx, { player, players });
+    await handleRevealRole(ctx, { player });
     return;
   }
 

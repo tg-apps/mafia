@@ -62,6 +62,11 @@ export async function startDay(ctx: Context, gameId: number) {
 }
 
 export async function startNight(ctx: Context, gameId: number) {
+  await db
+    .update(liveGames)
+    .set({ status: "night" })
+    .where(eq(liveGames.id, gameId));
+
   const players = await db.query.livePlayers.findMany({
     where: (livePlayers, { eq }) => eq(livePlayers.gameId, gameId),
   });
