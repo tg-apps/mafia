@@ -56,7 +56,7 @@ export async function startDay(ctx: Context, gameId: number) {
 
   await ctx.reply(
     `☀️ **Day phase**\nDiscuss and vote to lynch someone.\n\nType /vote or click a name below:`,
-    { parse_mode: "Markdown", reply_markup: keyboard },
+    { parse_mode: "MarkdownV2", reply_markup: keyboard },
   );
 }
 
@@ -87,6 +87,6 @@ export async function startNight(ctx: Context, gameId: number) {
   await ctx.reply(
     "🌙 **Night phase**\nMafia: choose target to kill (only your clicks count)\nVotes: 0/" +
       aliveMafia.length,
-    { parse_mode: "Markdown", reply_markup: keyboard },
+    { parse_mode: "MarkdownV2", reply_markup: keyboard },
   );
 }

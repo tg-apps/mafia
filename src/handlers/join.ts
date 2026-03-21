@@ -29,13 +29,17 @@ export async function handleJoin(ctx: Context & { chat: Chat; from: User }) {
     return ctx.reply("Already joined.");
   }
 
-  const total = await db
+  const inserted = await db
     .insert(lobbyPlayers)
     .values({ userId, gameId })
     .onConflictDoNothing()
     .returning();
 
+  if (!inserted.length) {
+    return ctx.reply("Already joined.");
+  }
+
   await ctx.reply(
-    `✅ ${getUserDisplayName(ctx.from)} joined! (${total.length} total)`,
+    `✅ ${getUserDisplayName(ctx.from)} joined! (${players.length + 1} total)`,
   );
 }

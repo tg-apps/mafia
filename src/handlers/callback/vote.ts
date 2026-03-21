@@ -27,7 +27,7 @@ async function updateDayProgress(
     keyboard.text(getUserDisplayName(userId), `vote:${userId}`).row(),
   );
 
-  await ctx.reply(text, { parse_mode: "Markdown", reply_markup: keyboard });
+  await ctx.reply(text, { parse_mode: "MarkdownV2", reply_markup: keyboard });
 }
 
 async function processDayLynch(
@@ -73,6 +73,7 @@ async function processDayLynch(
     if (lynched) {
       await ctx.reply(
         `☀️ **${getUserDisplayName(lynched.userId)}** was lynched.\nRole: **${lynched.role.toUpperCase()}**`,
+        { parse_mode: "MarkdownV2" },
       );
     }
   }
@@ -108,8 +109,10 @@ export async function handleVote(
   },
 ): Promise<true> {
   const targetId = parseInt(data.slice(5));
+  const voter = players.find((p) => p.userId === userId && p.alive);
   const target = players.find((p) => p.userId === targetId && p.alive);
 
+  if (!voter) return ctx.answerCallbackQuery("You can't vote right now.");
   if (!target) return ctx.answerCallbackQuery("Invalid target.");
 
   await db
