@@ -1,95 +1,52 @@
-import { eq } from "drizzle-orm";
-import { Context, InlineKeyboard } from "grammy";
+import { eq, and } from "drizzle-orm";
+import { Context } from "grammy";
 
 import { db } from "#db";
-import { liveGames, type LivePlayerData } from "#db/schema";
-import { checkWin } from "#game";
+import { livePlayers, liveNightActions, type LivePlayerData } from "#db/schema";
+import { checkWin, startDay } from "#game";
 import { getUserDisplayName } from "#utils/user";
-
-async function startDay(
-  ctx: Context,
-  { gameId, players }: { gameId: number; players: LivePlayerData[] },
-) {
-  await db
-    .update(liveGames)
-    .set({ status: "day" })
-    .where(eq(liveGames.id, gameId));
-
-  const alive = players.filter((p) => p.alive);
-
-  if (alive.length <= 1) {
-    await checkWin(ctx, { players, gameId });
-    return;
-  }
-
-  const keyboard = new InlineKeyboard();
-  alive.forEach(({ userId }) =>
-    keyboard.text(getUserDisplayName(userId), `vote:${userId}`).row(),
-  );
-
-  await ctx.reply(
-    `☀️ **Day phase**\nVote to lynch (click button)\nVotes: 0/${alive.length}`,
-    { parse_mode: "Markdown", reply_markup: keyboard },
-  );
-}
 
 async function processNightKill(
   ctx: Context,
   { gameId, players }: { gameId: number; players: LivePlayerData[] },
 ) {
-  const voteCounts: Record<number, number> = {};
+  const [action] = await db
+    .select()
+    .from(liveNightActions)
+    .where(eq(liveNightActions.gameId, gameId))
+    .limit(1);
 
-  for (const targetId of game.mafiaVotes.values()) {
-    voteCounts[targetId] = (voteCounts[targetId] || 0) + 1;
-  }
-  let max = 0;
-  let candidates: number[] = [];
-  for (const [tid, c] of Object.entries(voteCounts)) {
-    const t = parseInt(tid);
-    if (c > max) {
-      max = c;
-      candidates = [t];
-    } else if (c === max) candidates.push(t);
-  }
-  if (candidates.length === 0) {
-    await ctx.reply("🌙 No kill tonight.");
+  if (!action || !action.actionTowardsId) {
+    await ctx.reply("🌙 The Mafia was indecisive. No kill tonight.");
   } else {
-    const killId = candidates[Math.floor(Math.random() * candidates.length)];
+    const killId = action.actionTowardsId;
+
+    await db
+      .update(livePlayers)
+      .set({ alive: false })
+      .where(
+        and(eq(livePlayers.gameId, gameId), eq(livePlayers.userId, killId)),
+      );
+
     const killed = players.find((p) => p.userId === killId);
     if (killed) {
-      killed.alive = false;
       await ctx.reply(
         `🌙 **${getUserDisplayName(killed.userId)}** was killed.\nRole: **${killed.role.toUpperCase()}**`,
       );
     }
   }
 
-  if (!(await checkWin(ctx, { gameId, players }))) {
-    await startDay(ctx, { gameId, players });
-  }
-}
+  await db.delete(liveNightActions).where(eq(liveNightActions.gameId, gameId));
 
-async function updateNightProgress({
-  ctx,
-  players,
-}: {
-  ctx: Context;
-  players: LivePlayerData[];
-}) {
-  const aliveMafia = players.filter(
-    (p) => p.alive && p.role === "mafia",
-  ).length;
+  const updatedPlayers = await db
+    .select()
+    .from(livePlayers)
+    .where(eq(livePlayers.gameId, gameId));
 
-  const voted = game.mafiaVotes.size;
-  const text = `🌙 **Night phase**\nMafia votes: ${voted}/${aliveMafia}`;
+  const isWin = await checkWin(ctx, { gameId, players: updatedPlayers });
+  if (isWin) return;
 
-  const aliveVill = players.filter((p) => p.alive && p.role === "villager");
-  const keyboard = new InlineKeyboard();
-  aliveVill.forEach(({ userId }) =>
-    keyboard.text(getUserDisplayName(userId), `kill:${userId}`).row(),
-  );
-
-  await ctx.reply(text, { parse_mode: "Markdown", reply_markup: keyboard });
+  await startDay(ctx, gameId);
 }
 
 export async function handleKill(
@@ -117,18 +74,21 @@ export async function handleKill(
 
   if (!target) return ctx.answerCallbackQuery("Invalid target.");
 
-  game.mafiaVotes.set(player.userId, targetId);
+  await db
+    .insert(liveNightActions)
+    .values({
+      userId: player.userId,
+      gameId: gameId,
+      actionTowardsId: targetId,
+    })
+    .onConflictDoUpdate({
+      target: [liveNightActions.gameId, liveNightActions.userId],
+      set: { actionTowardsId: targetId },
+    });
+
   await ctx.answerCallbackQuery(
-    `You voted to kill ${getUserDisplayName(targetId)}.`,
+    `Target eliminated: ${getUserDisplayName(targetId)}.`,
   );
 
-  await updateNightProgress({ ctx, players });
-
-  const mafiaAlive = players.filter(
-    (p) => p.alive && p.role === "mafia",
-  ).length;
-
-  if (game.mafiaVotes.size === mafiaAlive) {
-    await processNightKill(ctx, { gameId, players });
-  }
+  await processNightKill(ctx, { gameId, players });
 }

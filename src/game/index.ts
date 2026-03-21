@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { Context, InlineKeyboard } from "grammy";
 
 import { db } from "#db";
-import { liveGames, type LivePlayerData } from "#db/schema";
+import { liveGames, livePlayers, type LivePlayerData } from "#db/schema";
 import { getUserDisplayName } from "#utils/user";
 
 async function endGame(ctx: Context, gameId: number) {
@@ -33,6 +33,32 @@ export async function checkWin(
     return true;
   }
   return false;
+}
+
+export async function startDay(ctx: Context, gameId: number) {
+  await db
+    .update(liveGames)
+    .set({ status: "day" })
+    .where(eq(liveGames.id, gameId));
+
+  const players = await db
+    .select()
+    .from(livePlayers)
+    .where(eq(livePlayers.gameId, gameId));
+
+  if (await checkWin(ctx, { gameId, players })) return;
+
+  const alive = players.filter((p) => p.alive);
+  const keyboard = new InlineKeyboard();
+
+  alive.forEach(({ userId }) => {
+    keyboard.text(getUserDisplayName(userId), `vote:${userId}`).row();
+  });
+
+  await ctx.reply(
+    `☀️ **Day phase**\nDiscuss and vote to lynch someone.\n\nType /vote or click a name below:`,
+    { parse_mode: "Markdown", reply_markup: keyboard },
+  );
 }
 
 export async function startNight(ctx: Context, gameId: number) {

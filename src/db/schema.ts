@@ -103,3 +103,25 @@ export const liveDayVotes = sqliteTable(
 );
 
 export type LiveDayVoteData = (typeof liveDayVotes)["$inferSelect"];
+
+export const liveNightActions = sqliteTable(
+  "live_night_actions",
+  {
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.userId, { onDelete: "restrict" }),
+    gameId: integer("game_id")
+      .notNull()
+      .references(() => liveGames.id, { onDelete: "cascade" }),
+    actionTowardsId: integer("action_towards_id").references(
+      () => users.userId,
+    ),
+  },
+  (table) => [
+    primaryKey({ columns: [table.gameId, table.userId] }),
+    index("idx_live_night_actions_user_id").on(table.userId),
+    index("idx_live_night_actions_game_id").on(table.gameId),
+  ],
+);
+
+export type LiveNightActionData = (typeof liveNightActions)["$inferSelect"];

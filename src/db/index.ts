@@ -65,6 +65,16 @@ sqlite.run(`
 
   CREATE INDEX IF NOT EXISTS idx_live_day_votes_user_id ON live_day_votes(user_id);
   CREATE INDEX IF NOT EXISTS idx_live_day_votes_game_id ON live_day_votes(game_id);
+
+  CREATE TABLE IF NOT EXISTS live_night_actions (
+    user_id           INTEGER NOT NULL REFERENCES users(user_id) ON DELETE RESTRICT,
+    game_id           INTEGER NOT NULL REFERENCES live_games(id) ON DELETE CASCADE,
+    action_towards_id INTEGER REFERENCES users(user_id),
+    PRIMARY KEY (game_id, user_id)
+  ) STRICT;
+
+  CREATE INDEX IF NOT EXISTS idx_live_night_actions_user_id ON live_night_actions(user_id);
+  CREATE INDEX IF NOT EXISTS idx_live_night_actions_game_id ON live_night_actions(game_id);
 `);
 
 const db = drizzle(sqlite, { schema });
