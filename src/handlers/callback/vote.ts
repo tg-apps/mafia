@@ -106,7 +106,7 @@ export async function handleVote(
     players: LivePlayerData[];
     gameId: number;
   },
-) {
+): Promise<true> {
   const targetId = parseInt(data.slice(5));
   const target = players.find((p) => p.userId === targetId && p.alive);
 
@@ -136,4 +136,6 @@ export async function handleVote(
   if ((currentVotes?.value ?? 0) >= aliveCount) {
     await processDayLynch(ctx, { players, gameId });
   }
+
+  return true;
 }

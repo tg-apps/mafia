@@ -10,8 +10,8 @@ import { handleVote } from "./vote";
 
 export async function handleCallback(
   ctx: Context & { callbackQuery: CallbackQuery; from: User },
-) {
-  if (!ctx.chat || !ctx.callbackQuery.data) return;
+): Promise<true> {
+  if (!ctx.chat || !ctx.callbackQuery.data) return true;
 
   const data = ctx.callbackQuery.data;
   const userId = ctx.from.id;
@@ -38,17 +38,16 @@ export async function handleCallback(
   }
 
   if (data === "reveal_role") {
-    await handleRevealRole(ctx, { player });
-    return;
+    return await handleRevealRole(ctx, { player });
   }
 
   if (data.startsWith("kill:") && game.status === "night") {
-    await handleKill(ctx, { player, data, gameId, players });
-    return;
+    return await handleKill(ctx, { player, data, gameId, players });
   }
 
   if (data.startsWith("vote:") && game.status === "day") {
-    await handleVote(ctx, { userId, data, players, gameId });
-    return;
+    return await handleVote(ctx, { userId, data, players, gameId });
   }
+
+  return await ctx.answerCallbackQuery("Action not available right now.");
 }

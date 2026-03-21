@@ -8,5 +8,5 @@ export async function handleRevealRole(
 ) {
   let text = `🃏 Your role: ${player.role}`;
   text += player.alive ? "\nYou are alive." : "\nYou are dead.";
-  await ctx.answerCallbackQuery({ text, show_alert: true });
+  return await ctx.answerCallbackQuery({ text, show_alert: true });
 }

@@ -17,10 +17,10 @@ export async function handleStartGame(ctx: Context & { chat: Chat }) {
 
   if (!lobby) return ctx.reply("No lobby.");
 
-  const gameId = lobby.id;
+  const lobbyId = lobby.id;
 
   const players = await db.query.lobbyPlayers.findMany({
-    where: (lobbyPlayers, { eq }) => eq(lobbyPlayers.gameId, gameId),
+    where: (lobbyPlayers, { eq }) => eq(lobbyPlayers.gameId, lobbyId),
   });
 
   if (players.length < MIN_PLAYERS) {
@@ -40,11 +40,13 @@ export async function handleStartGame(ctx: Context & { chat: Chat }) {
   await db.delete(lobbyGames).where(eq(lobbyGames.chatId, chatId));
 
   // Delete lobby players
-  await db.delete(lobbyPlayers).where(eq(lobbyPlayers.gameId, gameId));
+  await db.delete(lobbyPlayers).where(eq(lobbyPlayers.gameId, lobbyId));
 
   // Create live players
   players.forEach(({ userId }, i) => {
-    db.insert(livePlayers).values({ userId, gameId, role: roles[i]! }).run();
+    db.insert(livePlayers)
+      .values({ userId, gameId: game.id, role: roles[i]! })
+      .run();
   });
 
   await ctx.reply("🎮 Game starting! Roles assigned secretly.");

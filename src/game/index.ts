@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { Context, InlineKeyboard } from "grammy";
 
 import { db } from "#db";
-import { liveGames, livePlayers, type LivePlayerData } from "#db/schema";
+import { liveGames, type LivePlayerData } from "#db/schema";
 import { getUserDisplayName } from "#utils/user";
 
 async function endGame(ctx: Context, gameId: number) {
@@ -27,8 +27,8 @@ export async function checkWin(
     await endGame(ctx, gameId);
     return true;
   }
-  if (aliveMafia >= aliveVill && aliveVill > 0) {
-    await ctx.reply("😈 Mafia win! They outnumber/equal villagers.");
+  if (aliveVill === 0) {
+    await ctx.reply("😈 Mafia win! All villagers eliminated.");
     await endGame(ctx, gameId);
     return true;
   }
@@ -41,10 +41,9 @@ export async function startDay(ctx: Context, gameId: number) {
     .set({ status: "day" })
     .where(eq(liveGames.id, gameId));
 
-  const players = await db
-    .select()
-    .from(livePlayers)
-    .where(eq(livePlayers.gameId, gameId));
+  const players = await db.query.livePlayers.findMany({
+    where: (livePlayers, { eq }) => eq(livePlayers.gameId, gameId),
+  });
 
   if (await checkWin(ctx, { gameId, players })) return;
 

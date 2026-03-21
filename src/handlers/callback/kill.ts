@@ -62,7 +62,7 @@ export async function handleKill(
     data: string;
     players: LivePlayerData[];
   },
-) {
+): Promise<true> {
   if (player.role !== "mafia") {
     return ctx.answerCallbackQuery("Only Mafia can do this.");
   }
@@ -91,4 +91,6 @@ export async function handleKill(
   );
 
   await processNightKill(ctx, { gameId, players });
+
+  return true;
 }
