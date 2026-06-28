@@ -70,11 +70,13 @@ export async function startNight(ctx: Context, gameId: number) {
     where: (livePlayers, { eq }) => eq(livePlayers.gameId, gameId),
   });
 
-  const aliveMafia = players.filter((p) => p.alive && p.role === "mafia");
+  const aliveMafiaCount = players.filter(
+    (p) => p.alive && p.role === "mafia",
+  ).length;
 
   const aliveVill = players.filter((p) => p.alive && p.role === "villager");
 
-  if (aliveVill.length === 0 || aliveMafia.length === 0) {
+  if (aliveVill.length === 0 || aliveMafiaCount === 0) {
     await checkWin(ctx, { gameId, players });
     return;
   }
@@ -85,8 +87,7 @@ export async function startNight(ctx: Context, gameId: number) {
   });
 
   await ctx.reply(
-    "🌙 **Night phase**\nMafia: choose target to kill (only your clicks count)\nVotes: 0/" +
-      aliveMafia.length,
+    `🌙 **Night phase**\nMafia: choose target to kill (only your clicks count)\nVotes: 0/${aliveMafiaCount}`,
     { parse_mode: "MarkdownV2", reply_markup: keyboard },
   );
 }
