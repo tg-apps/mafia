@@ -17,7 +17,7 @@ export const users = sqliteTable(
   (table) => [index("idx_users_user_id").on(table.userId)],
 );
 
-export type UserData = (typeof users)["$inferSelect"];
+export type UserData = typeof users.$inferSelect;
 
 export const lobbyGames = sqliteTable(
   "lobby_games",
@@ -28,7 +28,7 @@ export const lobbyGames = sqliteTable(
   (table) => [index("idx_lobby_games_chat_id").on(table.chatId)],
 );
 
-export type LobbyGameData = (typeof lobbyGames)["$inferSelect"];
+export type LobbyGameData = typeof lobbyGames.$inferSelect;
 
 export const lobbyPlayers = sqliteTable(
   "lobby_players",
@@ -47,7 +47,7 @@ export const lobbyPlayers = sqliteTable(
   ],
 );
 
-export type LobbyPlayerData = (typeof lobbyPlayers)["$inferSelect"];
+export type LobbyPlayerData = typeof lobbyPlayers.$inferSelect;
 
 export const liveGames = sqliteTable(
   "live_games",
@@ -59,7 +59,7 @@ export const liveGames = sqliteTable(
   (table) => [index("idx_live_games_chat_id").on(table.chatId)],
 );
 
-export type LiveGameData = (typeof liveGames)["$inferSelect"];
+export type LiveGameData = typeof liveGames.$inferSelect;
 
 export const livePlayers = sqliteTable(
   "live_players",
@@ -80,7 +80,7 @@ export const livePlayers = sqliteTable(
   ],
 );
 
-export type LivePlayerData = (typeof livePlayers)["$inferSelect"];
+export type LivePlayerData = typeof livePlayers.$inferSelect;
 
 export const liveDayVotes = sqliteTable(
   "live_day_votes",
@@ -102,7 +102,7 @@ export const liveDayVotes = sqliteTable(
   ],
 );
 
-export type LiveDayVoteData = (typeof liveDayVotes)["$inferSelect"];
+export type LiveDayVoteData = typeof liveDayVotes.$inferSelect;
 
 export const liveNightActions = sqliteTable(
   "live_night_actions",
@@ -124,4 +124,4 @@ export const liveNightActions = sqliteTable(
   ],
 );
 
-export type LiveNightActionData = (typeof liveNightActions)["$inferSelect"];
+export type LiveNightActionData = typeof liveNightActions.$inferSelect;
