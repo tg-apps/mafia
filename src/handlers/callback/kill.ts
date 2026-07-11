@@ -10,17 +10,17 @@ async function processNightKill(
   ctx: Context,
   { gameId, players }: { gameId: number; players: LivePlayerData[] },
 ) {
-  const [action] = await db
+  const action = db
     .select()
     .from(liveNightActions)
     .where(eq(liveNightActions.gameId, gameId))
-    .limit(1);
+    .get();
 
-  if (!action || !action.actionTowardsId) {
+  const killId = action?.actionTowardsId;
+
+  if (!killId) {
     await ctx.reply("🌙 The Mafia was indecisive. No kill tonight.");
   } else {
-    const killId = action.actionTowardsId;
-
     await db
       .update(livePlayers)
       .set({ alive: false })
